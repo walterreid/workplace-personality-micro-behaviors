@@ -1,0 +1,491 @@
+import React, { useState, useEffect } from 'react';
+import { ChevronRight, RotateCcw, Users, Target, Brain, Heart, Zap, Settings, Shield, Star, CheckCircle } from 'lucide-react';
+
+const PersonalityAssessment = () => {
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [responses, setResponses] = useState({});
+  const [showResults, setShowResults] = useState(false);
+  const [isStarted, setIsStarted] = useState(false);
+
+  const behaviorData = [
+    {
+      trait: "Patience",
+      icon: Brain,
+      color: "bg-blue-500",
+      behaviors: [
+        { statement: "I tend to tailgate when driving.", direction: -1 },
+        { statement: "I leave at least 2 seconds of distance between me and the car in front.", direction: 1 },
+        { statement: "I interrupt others before they finish speaking.", direction: -1 }
+      ]
+    },
+    {
+      trait: "Self-Maintenance",
+      icon: Heart,
+      color: "bg-pink-500",
+      behaviors: [
+        { statement: "I often skip breakfast or lunch without realizing it.", direction: -1 },
+        { statement: "I make time to eat even on busy days.", direction: 1 },
+        { statement: "I routinely sacrifice sleep for work tasks.", direction: -1 }
+      ]
+    },
+    {
+      trait: "Focus",
+      icon: Target,
+      color: "bg-green-500",
+      behaviors: [
+        { statement: "I check every notification as soon as it appears.", direction: -1 },
+        { statement: "I can go hours without checking my phone when deep in work.", direction: 1 },
+        { statement: "I leave tabs open until I forget why I opened them.", direction: -1 }
+      ]
+    },
+    {
+      trait: "Control Orientation",
+      icon: Settings,
+      color: "bg-purple-500",
+      behaviors: [
+        { statement: "I organize my space obsessively before I can begin work.", direction: 1 },
+        { statement: "I dislike using calendars or to-do apps.", direction: -1 },
+        { statement: "I feel uneasy when plans change suddenly.", direction: 1 }
+      ]
+    },
+    {
+      trait: "Risk Tolerance",
+      icon: Zap,
+      color: "bg-yellow-500",
+      behaviors: [
+        { statement: "I enjoy being the first one to try something new, even if it's untested.", direction: 1 },
+        { statement: "I prefer to wait until others test something before I jump in.", direction: -1 },
+        { statement: "I feel uncomfortable making decisions without complete data.", direction: -1 }
+      ]
+    },
+    {
+      trait: "Empathy",
+      icon: Heart,
+      color: "bg-red-500",
+      behaviors: [
+        { statement: "I treat animals as if they understand me.", direction: 1 },
+        { statement: "I notice when people feel uncomfortable, even if they don't say it.", direction: 1 },
+        { statement: "I tend to overlook others' feelings when focused on a task.", direction: -1 }
+      ]
+    },
+    {
+      trait: "Structure vs Chaos",
+      icon: Shield,
+      color: "bg-indigo-500",
+      behaviors: [
+        { statement: "I pack excessively for even short trips.", direction: 1 },
+        { statement: "I rarely plan ahead and often wing it.", direction: -1 },
+        { statement: "I double-check everything before leaving the house.", direction: 1 }
+      ]
+    },
+    {
+      trait: "Social Energy",
+      icon: Users,
+      color: "bg-orange-500",
+      behaviors: [
+        { statement: "I'm the first one on the dance floor at events.", direction: 1 },
+        { statement: "I avoid social situations unless necessary.", direction: -1 },
+        { statement: "I feel energized after interacting with strangers.", direction: 1 }
+      ]
+    },
+    {
+      trait: "Initiative",
+      icon: Star,
+      color: "bg-teal-500",
+      behaviors: [
+        { statement: "I start tasks right away without needing reminders.", direction: 1 },
+        { statement: "I wait until deadlines are near to begin working.", direction: -1 },
+        { statement: "I need external pressure to finish personal projects.", direction: -1 }
+      ]
+    },
+    {
+      trait: "Stress Regulation",
+      icon: CheckCircle,
+      color: "bg-cyan-500",
+      behaviors: [
+        { statement: "I lose my temper in traffic or long lines.", direction: -1 },
+        { statement: "I recover quickly from setbacks or delays.", direction: 1 },
+        { statement: "I carry emotional stress from one part of my life into another.", direction: -1 }
+      ]
+    }
+  ];
+
+  // Flatten all behaviors into questions
+  const allQuestions = [];
+  behaviorData.forEach((trait, traitIndex) => {
+    trait.behaviors.forEach((behavior, behaviorIndex) => {
+      allQuestions.push({
+        ...behavior,
+        trait: trait.trait,
+        traitIndex,
+        id: `${traitIndex}-${behaviorIndex}`
+      });
+    });
+  });
+
+  // Shuffle questions for better experience
+  const [shuffledQuestions] = useState(() => {
+    const shuffled = [...allQuestions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, 15); // Take 15 questions
+  });
+
+  const handleResponse = (value) => {
+    setResponses(prev => ({
+      ...prev,
+      [currentQuestion]: value
+    }));
+
+    if (currentQuestion < shuffledQuestions.length - 1) {
+      setTimeout(() => {
+        setCurrentQuestion(prev => prev + 1);
+      }, 200);
+    } else {
+      setTimeout(() => {
+        setShowResults(true);
+      }, 500);
+    }
+  };
+
+  const calculateScores = () => {
+    const traitScores = {};
+    const traitCounts = {};
+
+    // Initialize scores
+    behaviorData.forEach(trait => {
+      traitScores[trait.trait] = 0;
+      traitCounts[trait.trait] = 0;
+    });
+
+    // Calculate scores based on responses
+    shuffledQuestions.forEach((question, index) => {
+      if (responses[index] !== undefined) {
+        const score = responses[index]; // 1-5 scale
+        const adjustedScore = (score - 3) * question.direction; // Convert to -2 to +2, then apply direction
+        traitScores[question.trait] += adjustedScore;
+        traitCounts[question.trait]++;
+      }
+    });
+
+    // Average and normalize scores to 0-100 scale
+    Object.keys(traitScores).forEach(trait => {
+      if (traitCounts[trait] > 0) {
+        const avgScore = traitScores[trait] / traitCounts[trait];
+        traitScores[trait] = Math.max(0, Math.min(100, (avgScore + 2) * 25)); // Scale -2,+2 to 0,100
+      }
+    });
+
+    return traitScores;
+  };
+
+  const getWorkCultureFit = (scores) => {
+    const profiles = [
+      {
+        name: "Strategic Innovator",
+        description: "Thrives in forward-thinking environments with autonomy and creative challenges",
+        workplaceStyle: "Leads change initiatives and embraces uncertainty as opportunity. Prefers minimal oversight and maximum creative freedom. Often the first to propose unconventional solutions and push boundaries. Works best when given big-picture goals rather than detailed instructions.",
+        growthEdge: "May move too quickly from idea to idea without fully developing implementation details. Can become impatient with slower-moving colleagues or extensive approval processes.",
+        match: scores["Risk Tolerance"] > 70 && scores["Initiative"] > 60 && scores["Focus"] > 60,
+        score: (scores["Risk Tolerance"] + scores["Initiative"] + scores["Focus"]) / 3
+      },
+      {
+        name: "Collaborative Harmonizer", 
+        description: "Excels in team-oriented cultures with strong interpersonal dynamics",
+        workplaceStyle: "Natural mediator who builds bridges between different personalities and departments. Thrives in consensus-driven environments and excels at reading team dynamics. Often becomes the informal team counselor and culture carrier. Prefers collaborative decision-making over individual mandates.",
+        growthEdge: "May avoid necessary conflicts or difficult conversations to maintain harmony. Sometimes struggles to advocate for their own ideas when they differ from group consensus.",
+        match: scores["Empathy"] > 70 && scores["Social Energy"] > 60 && scores["Patience"] > 60,
+        score: (scores["Empathy"] + scores["Social Energy"] + scores["Patience"]) / 3
+      },
+      {
+        name: "Operational Excellence",
+        description: "Perfect for structured environments requiring attention to detail and consistency",
+        workplaceStyle: "The backbone of reliable execution. Creates and maintains systems that others depend on. Thrives on clear processes and measurable outcomes. Often becomes the go-to person for complex logistics and quality assurance. Values predictability and systematic approaches to problem-solving.",
+        growthEdge: "Can become overwhelmed when priorities shift rapidly or when forced to work without clear guidelines. May resist changes to established processes even when improvement is needed.",
+        match: scores["Structure vs Chaos"] > 70 && scores["Control Orientation"] > 60 && scores["Focus"] > 60,
+        score: (scores["Structure vs Chaos"] + scores["Control Orientation"] + scores["Focus"]) / 3
+      },
+      {
+        name: "Resilient Adapter",
+        description: "Fits well in dynamic, fast-paced environments with changing priorities",
+        workplaceStyle: "The steady hand during turbulent times. Maintains composure when plans shift and deadlines compress. Often assigned to crisis management or high-pressure projects. Excels at juggling multiple priorities without losing focus. Teammates rely on them to stay calm and solution-focused when others feel overwhelmed.",
+        growthEdge: "May take on too many responsibilities without asking for help, leading to eventual burnout. Sometimes appears emotionally distant when focusing intensely on problem-solving.",
+        match: scores["Stress Regulation"] > 70 && scores["Risk Tolerance"] > 50 && scores["Initiative"] > 60,
+        score: (scores["Stress Regulation"] + scores["Risk Tolerance"] + scores["Initiative"]) / 3
+      },
+      {
+        name: "Thoughtful Analyst",
+        description: "Suited for research-oriented or analytical roles requiring deep thinking",
+        workplaceStyle: "The deep thinker who uncovers insights others miss. Prefers thorough analysis over quick decisions and values accuracy over speed. Often consulted for complex problem-solving and strategic planning. Thrives when given time to explore ideas fully and present well-reasoned recommendations. Works best with minimal interruptions.",
+        growthEdge: "May overthink decisions or delay action while seeking additional data. Can become frustrated in fast-paced environments that prioritize quick iteration over thorough analysis.",
+        match: scores["Focus"] > 70 && scores["Patience"] > 60 && scores["Structure vs Chaos"] > 50,
+        score: (scores["Focus"] + scores["Patience"] + scores["Structure vs Chaos"]) / 3
+      },
+      {
+        name: "Empathetic Leader",
+        description: "Natural leader who prioritizes team wellbeing and inclusive decision-making",
+        workplaceStyle: "Leads through understanding and inspiration rather than authority. Creates psychological safety where team members feel heard and valued. Excels at identifying individual strengths and matching people to roles. Often mediates conflicts and builds consensus. Prefers servant leadership over command-and-control approaches.",
+        growthEdge: "May struggle with necessary but unpopular decisions that could negatively impact individuals. Sometimes takes team conflicts or failures too personally, affecting their own wellbeing.",
+        match: scores["Empathy"] > 70 && scores["Initiative"] > 60 && scores["Social Energy"] > 60,
+        score: (scores["Empathy"] + scores["Initiative"] + scores["Social Energy"]) / 3
+      },
+      {
+        name: "Steady Executor",
+        description: "Reliable performer who maintains consistency and takes care of fundamentals",
+        workplaceStyle: "The dependable foundation others build upon. Maintains high personal standards and sustainable work practices. Rarely burns out because they pace themselves well. Often becomes the institutional memory and process guardian. Prefers incremental improvement over dramatic overhauls.",
+        growthEdge: "May be perceived as resistant to change or lacking urgency during critical moments. Sometimes undervalues their own contributions and avoids taking credit for successes.",
+        match: scores["Patience"] > 60 && scores["Structure vs Chaos"] > 60 && scores["Self-Maintenance"] > 60,
+        score: (scores["Patience"] + scores["Structure vs Chaos"] + scores["Self-Maintenance"]) / 3
+      },
+      {
+        name: "Creative Maverick",
+        description: "Innovative problem-solver who thrives in unstructured, experimental environments", 
+        workplaceStyle: "Challenges conventional thinking and finds novel approaches to old problems. Thrives in ambiguous situations where others feel lost. Often works in bursts of intense creativity followed by reflection periods. Prefers flexible schedules and unconventional work arrangements. Best utilized for breakthrough thinking and innovation projects.",
+        growthEdge: "May struggle with routine tasks or detailed follow-through on creative ideas. Can become impatient with bureaucracy or colleagues who prefer established methods.",
+        match: scores["Risk Tolerance"] > 70 && scores["Structure vs Chaos"] < 40 && scores["Focus"] > 60,
+        score: (scores["Risk Tolerance"] + (100 - scores["Structure vs Chaos"]) + scores["Focus"]) / 3
+      },
+      {
+        name: "People-First Culture Builder",
+        description: "Champions team morale and creates positive, inclusive work environments",
+        workplaceStyle: "The social glue that keeps teams connected and motivated. Organizes team building activities and maintains positive energy during challenging times. Naturally networks across departments and builds informal communication channels. Often becomes the cultural ambassador for company values. Excels at onboarding and mentoring new team members.",
+        growthEdge: "May prioritize team happiness over necessary performance discussions or tough feedback. Can become drained by constantly managing others' emotions and workplace dynamics.",
+        match: scores["Empathy"] > 60 && scores["Social Energy"] > 70 && scores["Stress Regulation"] > 60,
+        score: (scores["Empathy"] + scores["Social Energy"] + scores["Stress Regulation"]) / 3
+      }
+    ];
+
+    // Calculate scores for all matching profiles
+    const matchingProfiles = profiles.filter(profile => profile.match);
+    
+    if (matchingProfiles.length === 0) {
+      // If no perfect matches, find best fit by highest combined score
+      profiles.forEach(profile => {
+        if (!profile.score) {
+          // Calculate a general compatibility score for non-matching profiles
+          const allScoreValues = Object.values(scores);
+          profile.score = allScoreValues.reduce((sum, score) => sum + score, 0) / allScoreValues.length;
+        }
+      });
+      matchingProfiles.push(profiles.reduce((best, current) => 
+        current.score > best.score ? current : best
+      ));
+    }
+
+    // Sort by score and get primary and secondary
+    matchingProfiles.sort((a, b) => b.score - a.score);
+    
+    const primary = matchingProfiles[0];
+    let secondary = null;
+    
+    // Include secondary if it's within 15 points of primary
+    if (matchingProfiles.length > 1 && (primary.score - matchingProfiles[1].score) < 15) {
+      secondary = matchingProfiles[1];
+    }
+    
+    return { primary, secondary };
+  };
+
+  const resetAssessment = () => {
+    setCurrentQuestion(0);
+    setResponses({});
+    setShowResults(false);
+    setIsStarted(false);
+  };
+
+  const scores = showResults ? calculateScores() : {};
+  const workCultureFit = showResults ? getWorkCultureFit(scores) : null;
+
+  if (!isStarted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 p-4">
+        <div className="max-w-md mx-auto pt-12">
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <Brain className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Workplace Personality Assessment
+            </h1>
+            <p className="text-gray-600 leading-relaxed">
+              Discover your unique personality traits and find your ideal work culture fit through behavioral insights.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">What You'll Discover:</h2>
+            <div className="space-y-3 text-sm text-gray-600">
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Your scores across 10 key personality traits</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Personalized work culture recommendations</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Insights based on micro-behavioral patterns</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsStarted(true)}
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
+          >
+            Start Assessment
+          </button>
+
+          <p className="text-xs text-gray-500 text-center mt-4">
+            Takes about 3-5 minutes • 15 questions
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (showResults) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 p-4">
+        <div className="max-w-md mx-auto pt-8">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-teal-600 rounded-full mx-auto mb-3 flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Your Results</h1>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              {workCultureFit.primary.name}
+            </h2>
+            <p className="text-gray-600 text-sm mb-4">
+              {workCultureFit.primary.description}
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 mb-3">
+              <h3 className="font-semibold text-gray-900 text-sm mb-2">Workplace Style:</h3>
+              <p className="text-gray-700 text-xs leading-relaxed">
+                {workCultureFit.primary.workplaceStyle}
+              </p>
+            </div>
+            <div className="bg-amber-50 rounded-lg p-4">
+              <h3 className="font-semibold text-amber-900 text-sm mb-2">Growth Edge:</h3>
+              <p className="text-amber-800 text-xs leading-relaxed">
+                {workCultureFit.primary.growthEdge}
+              </p>
+            </div>
+            {workCultureFit.secondary && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                  Secondary Trait: {workCultureFit.secondary.name}
+                </h3>
+                <p className="text-gray-600 text-xs">
+                  {workCultureFit.secondary.description}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3 mb-6">
+            {behaviorData.map((trait) => {
+              const Icon = trait.icon;
+              const score = scores[trait.trait] || 0;
+              return (
+                <div key={trait.trait} className="bg-white rounded-lg shadow-md p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 ${trait.color} rounded-lg flex items-center justify-center`}>
+                        <Icon className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="font-medium text-gray-900 text-sm">
+                        {trait.trait}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700">
+                      {Math.round(score)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-1000 ${trait.color}`}
+                      style={{ width: `${score}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={resetAssessment}
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Take Assessment Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const progress = ((currentQuestion + 1) / shuffledQuestions.length) * 100;
+  const currentQ = shuffledQuestions[currentQuestion];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 p-4">
+      <div className="max-w-md mx-auto pt-8">
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium text-gray-700">
+              Question {currentQuestion + 1} of {shuffledQuestions.length}
+            </span>
+            <span className="text-sm text-gray-500">
+              {Math.round(progress)}%
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <p className="text-lg font-medium text-gray-900 leading-relaxed">
+            {currentQ.statement}
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {[
+            { value: 5, label: "Strongly Agree", color: "from-green-600 to-green-700" },
+            { value: 4, label: "Agree", color: "from-green-500 to-green-600" },
+            { value: 3, label: "Neutral", color: "from-gray-500 to-gray-600" },
+            { value: 2, label: "Disagree", color: "from-red-500 to-red-600" },
+            { value: 1, label: "Strongly Disagree", color: "from-red-600 to-red-700" }
+          ].map((option) => (
+            <button
+              key={option.value}
+              onClick={() => handleResponse(option.value)}
+              className={`w-full bg-gradient-to-r ${option.color} text-white py-4 px-6 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="text-center mt-6">
+          <p className="text-xs text-gray-500">
+            Tap your response to continue
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PersonalityAssessment;
